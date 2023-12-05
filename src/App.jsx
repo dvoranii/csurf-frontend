@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCsrfToken } from "./hooks/useCSRF";
 import { useRecaptcha } from "./hooks/useReCAPTCHA";
+import sanitizeInput from "./utils/sanitizeInput";
 
 function App() {
   const csrfToken = useCsrfToken();
@@ -23,6 +24,12 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const sanitizedData = {
+      name: sanitizeInput.text(formData.name),
+      email: sanitizeInput.email(formData.email),
+      message: sanitizeInput.text(formData.message),
+    };
     try {
       const response = await fetch("http://localhost:5000/process", {
         method: "POST",
@@ -30,7 +37,7 @@ function App() {
           "Content-Type": "application/json",
           "X-XSRF-TOKEN": csrfToken,
         },
-        body: JSON.stringify({ ...formData, recaptchaToken }),
+        body: JSON.stringify({ ...sanitizedData, recaptchaToken }),
         credentials: "include",
       });
       const data = await response.json();
