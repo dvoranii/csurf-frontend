@@ -1,41 +1,39 @@
-import "./global.css";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useCsrfToken } from "./hooks/useCSRF";
+import { useRecaptcha } from "./hooks/useReCAPTCHA";
 
 function App() {
-  const [csrfToken, setCsrfToken] = useState("");
+  const csrfToken = useCsrfToken();
+  const recaptchaToken = useRecaptcha(
+    "6LecdSIpAAAAAN-xfoG0bDQlO-97NHbDLnmAC-D1"
+  );
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    message: "",
+  });
 
-  useEffect(() => {
-    const fetchCsrfToken = async () => {
-      if (!csrfToken) {
-        // Fetch only if csrfToken is not already set
-        try {
-          const response = await fetch("http://localhost:3000/form", {
-            credentials: "include",
-          });
-          const data = await response.json();
-          setCsrfToken(data.csrfToken);
-        } catch (error) {
-          console.error("Error fetching CSRF token:", error);
-        }
-      }
-    };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevFormData) => ({
+      ...prevFormData,
+      [name]: value,
+    }));
+  };
 
-    console.log(csrfToken);
-    fetchCsrfToken();
-  }, [csrfToken]); // Add csrfToken to the dependency array
-
-  const handleSubmit = async () => {
-    console.log(csrfToken);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      const response = await fetch("http://localhost:3000/process", {
+      const response = await fetch("http://localhost:5000/process", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-XSRF-TOKEN": csrfToken,
         },
+        body: JSON.stringify({ ...formData, recaptchaToken }),
         credentials: "include",
       });
-      const data = await response.text();
+      const data = await response.json();
       console.log("Response:", data);
     } catch (error) {
       console.error("Error in POST request:", error);
@@ -45,7 +43,29 @@ function App() {
   return (
     <div>
       <h1>React CSRF Demo</h1>
-      <button onClick={handleSubmit}>Submit</button>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          placeholder="Name"
+        />
+        <input
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          placeholder="Email"
+        />
+        <textarea
+          name="message"
+          value={formData.message}
+          onChange={handleChange}
+          placeholder="Message"
+        />
+        <button type="submit">Submit</button>
+      </form>
     </div>
   );
 }
